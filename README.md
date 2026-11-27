@@ -96,6 +96,33 @@ IoU médio dos acertos ≈ 0,67: as caixas anotadas à mão são mais folgadas q
 carro com caixa diferente. Exemplos visuais em `avaliacao/exemplos/` (azul = acerto, vermelho = FP, amarelo = FN,
 verde = anotação, branco = ROI).
 
+## Vídeos de resultado
+
+Ficam na pasta `videos/` do zip de entrega (não vão para o GitHub por tamanho; recodificados em H.264 para ficarem leves).
+
+| Arquivo | Configuração (1125.mp4, verdade = 47) | Total |
+|---|---|---|
+| `01_final_yolo_cnn.mp4` | **Final: YOLO + CNN, conf 0,25, ROI** | **43** |
+| `02_so_yolo.mp4` | Só YOLO | 45 |
+| `03_conf_0.50.mp4` | conf 0,50 | 48 |
+| `04_sem_roi.mp4` | Sem ROI | 46 |
+| `05_escuro.mp4` / `06_escuro_clahe.mp4` | Escuro / + CLAHE | 43 / 45 |
+| `07_baixa_res.mp4` / `08_baixa_res_clahe.mp4` | Baixa resolução / + CLAHE | 33 / 45 |
+| `09_borrado.mp4` / `10_borrado_clahe.mp4` | Borrado / + CLAHE | 44 / 49 |
+| `11_original_clahe.mp4` | Original + CLAHE | 45 |
+| `12_jogo_2min_apresentacao.mp4` | Vídeo do jogo (2 min), rodado na apresentação | 146 |
+
+### Vídeo do jogo (2 min)
+
+O sistema contou **146** (112 carros, 3 motos, 8 ônibus, 23 caminhões). A contagem de referência é **135 ± 2**,
+feita fora do sistema: uma linha virtual fixa na pista, empilhada frame a frame numa imagem (cada veículo que cruza
+vira uma mancha), com os casos duvidosos conferidos nos frames, mais os veículos que ainda estavam na ROI no último
+frame. Nos primeiros 30 s (o trecho do `1125.mp4`) esse método dá exatamente os 47 da contagem manual.
+
+No vídeo longo o sistema passou a **contar a mais (+11, cerca de 8%)**, ao contrário do trecho de 30 s (−4).
+Hipótese: o vídeo longo tem congestionamento e muitos veículos compridos (carretas, caçamba, ônibus, caminhões-baú),
+o que favorece troca de ID e contagem dupla; as classes também se confundem (o sistema marcou 8 ônibus onde há 2).
+
 ## Estrutura
 
 ```
