@@ -49,6 +49,7 @@ INTERVALO_TENTATIVA_CNN = 10  # intervalo em frames entre reavaliacoes (evita re
 JANELA_REASSOCIACAO = 20      # frames recentes para reconhecer carro que perdeu e ganhou novo ID
 IOU_DUPLICATA = 0.35          # sobreposicao minima para considerar o mesmo veiculo (evita contar 2x)
 INDICE_CLASSE_VEICULO = 1     # no dataset do Kaggle: 0=non-vehicles, 1=vehicles
+LARGURA_MAX_PROCESSAMENTO = 1920  # videos maiores (ex.: 4K) sao reduzidos para essa largura: mais leve e texto legivel
 
 NOMES_CLASSES = {
     2: "Carro",
@@ -541,6 +542,11 @@ def eh_mesmo_veiculo(
     return False
 
 
+def escala_texto(w: int, base: int = 1280) -> float:
+    """Fator para o texto acompanhar a largura do video (fonte do OpenCV tem tamanho fixo em pixels)."""
+    return max(1.0, w / base)
+
+
 def desenhar_roi(frame: np.ndarray, roi_poly: np.ndarray, mascara_fora: np.ndarray) -> np.ndarray:
     """Escurece levemente o que está fora do ROI e destaca o contorno ativo."""
     escurecido = (frame * 0.45).astype(np.uint8)
@@ -558,9 +564,11 @@ def desenhar_hud(
 ) -> None:
     """Desenha o placar ao vivo com fundo semitransparente."""
     h, w = frame.shape[:2]
+    s = escala_texto(w)
+    esp = max(2, round(2 * s))
     overlay = frame.copy()
     altura_hud = 228 if usa_cnn else 200
-    cv2.rectangle(overlay, (10, 10), (315, altura_hud), (15, 15, 15), -1)
+    cv2.rectangle(overlay, (10, 10), (int(315 * s), int(altura_hud * s)), (15, 15, 15), -1)
     cv2.addWeighted(overlay, 0.72, frame, 0.28, 0, frame)
 
     total = sum(contagem.values())
@@ -576,12 +584,13 @@ def desenhar_hud(
     if usa_cnn:
         linhas.append((f"CNN OK: {aprovados_cnn} | Rej: {rejeitados}", (120, 255, 160), 0.52))
     for i, (texto, cor, escala) in enumerate(linhas):
-        cv2.putText(frame, texto, (22, 42 + i * 28), cv2.FONT_HERSHEY_SIMPLEX, escala, cor, 2)
+        cv2.putText(frame, texto, (int(22 * s), int((42 + i * 28) * s)), cv2.FONT_HERSHEY_SIMPLEX, escala * s, cor, esp)
 
     # Rodape com comandos
     rodape = "[ESPACO] Pausar  |  [Q] Encerrar"
-    cv2.rectangle(frame, (0, h - 32), (w, h), (15, 15, 15), -1)
-    cv2.putText(frame, rodape, (15, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
+    cv2.rectangle(frame, (0, h - int(32 * s)), (w, h), (15, 15, 15), -1)
+    cv2.putText(frame, rodape, (int(15 * s), h - int(10 * s)), cv2.FONT_HERSHEY_SIMPLEX, 0.55 * s, (200, 200, 200),
+                max(1, round(s)))
 
 
 def gerar_tela_podio(
@@ -594,37 +603,42 @@ def gerar_tela_podio(
     """Cria a tela final com o total real e o ranking dos palpites."""
     tela = np.full((h, w, 3), 24, dtype=np.uint8)
     total_real = sum(contagem.values())
+    s = escala_texto(w)
+    esp = max(2, round(2 * s))
 
-    cv2.putText(tela, f"RESULTADO FINAL - {modo_label}", (40, 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2)
+    def y(v: float) -> int:
+        return int(v * s)
+
+    cv2.putText(tela, f"RESULTADO FINAL - {modo_label}", (y(40), y(60)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.9 * s, (0, 255, 255), esp)
 
     resumo = (
         f"TOTAL REAL: {total_real}  |  "
         f"Carros: {contagem['Carro']}  Motos: {contagem['Moto']}  "
         f"Onibus: {contagem['Onibus']}  Caminhoes: {contagem['Caminhao']}"
     )
-    cv2.putText(tela, resumo, (40, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 2)
-    cv2.line(tela, (40, 130), (w - 40, 130), (80, 80, 80), 2)
+    cv2.putText(tela, resumo, (y(40), y(110)), cv2.FONT_HERSHEY_SIMPLEX, 0.65 * s, (255, 255, 255), esp)
+    cv2.line(tela, (y(40), y(130)), (w - y(40), y(130)), (80, 80, 80), esp)
 
     if palpites:
         ranking = sorted(palpites.items(), key=lambda item: abs(item[1] - total_real))
         menor_erro = abs(ranking[0][1] - total_real)
-        cv2.putText(tela, "RANKING DOS PALPITES:", (40, 175),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 220, 120), 2)
+        cv2.putText(tela, "RANKING DOS PALPITES:", (y(40), y(175)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.75 * s, (0, 220, 120), esp)
 
         for pos, (pessoa, palpite) in enumerate(ranking[:8], start=1):
             erro = abs(palpite - total_real)
             vencedor = "  <-- VENCEDOR!" if erro == menor_erro else ""
             cor = (0, 255, 120) if erro == menor_erro else (230, 230, 230)
             linha = f"{pos}o - {pessoa}: palpite {palpite} (erro: {erro}){vencedor}"
-            cv2.putText(tela, linha, (55, 220 + (pos - 1) * 38),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, cor, 2)
+            cv2.putText(tela, linha, (y(55), y(220 + (pos - 1) * 38)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7 * s, cor, esp)
     else:
-        cv2.putText(tela, "Nenhum palpite cadastrado nesta rodada.", (40, 190),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (180, 180, 180), 2)
+        cv2.putText(tela, "Nenhum palpite cadastrado nesta rodada.", (y(40), y(190)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7 * s, (180, 180, 180), esp)
 
-    cv2.putText(tela, "Pressione qualquer tecla para fechar.", (40, h - 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (160, 160, 160), 1)
+    cv2.putText(tela, "Pressione qualquer tecla para fechar.", (y(40), h - y(30)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6 * s, (160, 160, 160), max(1, round(s)))
     return tela
 
 
@@ -669,9 +683,19 @@ def executar_contagem(
         raise FileNotFoundError(f"Não consegui abrir o vídeo (formato/codec?): {video_path}")
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    w_orig = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h_orig = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
+    # Videos muito grandes (4K) sao reduzidos: o YOLO ja trabalha em 960 px, entao a deteccao nao perde nada,
+    # mas ler, mascarar, desenhar e gravar 4K pesa muito na CPU e o texto fica minusculo.
+    fator_reducao = min(1.0, LARGURA_MAX_PROCESSAMENTO / w_orig) if w_orig else 1.0
+    w = int(round(w_orig * fator_reducao)) // 2 * 2 if fator_reducao < 1.0 else w_orig
+    h = int(round(h_orig * fator_reducao)) // 2 * 2 if fator_reducao < 1.0 else h_orig
+
+    def reduzir(img: np.ndarray) -> np.ndarray:
+        if fator_reducao >= 1.0:
+            return img
+        return cv2.resize(img, (w, h), interpolation=cv2.INTER_AREA)
 
     # Lê o 1º frame para o usuário delimitar o ROI real (onde o YOLO vai detectar)
     ret_init, primeiro_frame = cap.read()
@@ -680,13 +704,15 @@ def executar_contagem(
         raise RuntimeError("Não consegui ler nenhum frame do vídeo.")
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     duracao_s = total_frames / fps if fps else 0
-    print(f"Vídeo: {Path(video_path).name} | {w}x{h} | {fps:.2f} FPS | {total_frames} frames (~{duracao_s:.1f}s)")
+    print(f"Vídeo: {Path(video_path).name} | {w_orig}x{h_orig} | {fps:.2f} FPS | {total_frames} frames (~{duracao_s:.1f}s)")
+    if fator_reducao < 1.0:
+        print(f"Vídeo grande: processando em {w}x{h} (mais leve; o YOLO já usa {TAMANHO_IMG_YOLO} px).")
     print(f"Configuração: condição={condicao} | pré-processamento={preproc} | ROI={'sim' if usar_roi else 'não'}")
 
     roi_poly = None
     if usar_roi:
         if lote:
-            roi_poly = carregar_roi_salvo(video_path, w, h)
+            roi_poly = carregar_roi_salvo(video_path, w_orig, h_orig)
             if roi_poly is None:
                 cap.release()
                 raise RuntimeError(
@@ -696,6 +722,11 @@ def executar_contagem(
             print(f"Usando ROI salvo ({len(roi_poly)} pontos).")
         else:
             roi_poly = selecionar_roi_interativo(primeiro_frame, video_path)
+    if roi_poly is not None and fator_reducao < 1.0:
+        roi_poly = np.round(roi_poly.astype(np.float64) * fator_reducao).astype(np.int32)
+    primeiro_frame = reduzir(primeiro_frame)
+    fonte_tag = 0.52 * escala_texto(w, 1600)
+    esp_caixa = max(2, round(2 * escala_texto(w)))
     mascara_roi = None
     mascara_fora = None
     if roi_poly is not None:
@@ -762,6 +793,7 @@ def executar_contagem(
                     break
                 t_frame = time.perf_counter()
                 frames_video += 1
+                frame = reduzir(frame)
 
                 # 0. Condição de teste (R6) e pré-processamento (R2) — o pipeline inteiro enxerga este frame
                 frame = aplicar_condicao(frame, condicao)
@@ -911,12 +943,12 @@ def executar_contagem(
                             cor = (0, 255, 255)  # amarelo: confirmando
                             tag = f"#{tid} {nome_exibir}... ({pcts})"
 
-                        cv2.rectangle(frame, (x1, y1), (x2, y2), cor, 2)
-                        (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, 0.52, 2)
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), cor, esp_caixa)
+                        (tw, th), _ = cv2.getTextSize(tag, cv2.FONT_HERSHEY_SIMPLEX, fonte_tag, esp_caixa)
                         ty = max(y1 - 6, th + 6)
                         cv2.rectangle(frame, (x1, ty - th - 4), (x1 + tw + 6, ty + 3), (15, 15, 15), -1)
                         cv2.putText(frame, tag, (x1 + 3, ty),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.52, cor, 2)
+                                    cv2.FONT_HERSHEY_SIMPLEX, fonte_tag, cor, esp_caixa)
 
                 aprovados_cnn = sum(1 for ok, _, _, orig in validados_cnn.values() if ok and orig == "CNN")
                 rejeitados = sum(1 for ok, _, tent, _ in validados_cnn.values() if not ok and tent >= MAX_TENTATIVAS_CNN)
@@ -1033,7 +1065,7 @@ def executar_contagem(
     linha = {
         "data_hora": agora.strftime("%d/%m/%Y %H:%M:%S"),
         "video": Path(video_path).name,
-        "resolucao": f"{w}x{h}",
+        "resolucao": f"{w_orig}x{h_orig}",
         "fps_origem": round(fps, 2),
         "frames_processados": frames_video,
         "modo": modo_usado,
