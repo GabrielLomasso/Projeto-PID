@@ -1,0 +1,12 @@
+# Dependências do projeto (Python 3.10+).
+# Para registrar as versões exatas usadas no PC do grupo (R8), rode:
+#     pip freeze > requirements-versoes.txt
+ultralytics>=8.0
+lap
+opencv-python
+numpy
+tensorflow
+pandas
+scikit-learn
+kagglehub
+pillow

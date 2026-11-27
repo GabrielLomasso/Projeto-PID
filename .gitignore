@@ -1,0 +1,19 @@
+# pesados / gerados
+*.mp4
+*.avi
+*.mov
+*.pt
+*.keras
+*.h5
+avaliacao/frames/
+avaliacao/visual/
+resultados/logs/
+resultados/historico_contagens.txt
+
+# python / ide
+__pycache__/
+*.pyc
+.venv/
+venv/
+.idea/
+.vscode/
