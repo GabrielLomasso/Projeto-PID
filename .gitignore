@@ -17,3 +17,7 @@ __pycache__/
 venv/
 .idea/
 .vscode/
+
+# kit da apresentacao (gerado)
+kit_apresentacao/
+kit_apresentacao.zip

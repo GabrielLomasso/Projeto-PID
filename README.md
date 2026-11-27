@@ -30,6 +30,7 @@ do menu), `rois_salvos.json` (criado ao marcar a ROI). Os pesos `yolov8s.pt` sã
 | Variações | `--modo yolo`, `--conf 0.5`, `--sem-roi`, `--condicao escuro\|baixa_res\|borrado`, `--preproc clahe` |
 | Todos os experimentos em sequência | `python rodar_experimentos.py --video 1125.mp4` |
 | Apresentação (palpites + vídeo já processado + pódio) | `python contador_veiculos.py --apresentar resultados/<video_resultado>.mp4` |
+| Kit para o PC da apresentação (zip com tudo que o jogo precisa) | `python montar_kit.py` (ou `--completo`) |
 
 Cada rodada salva o vídeo anotado em `resultados/`, acrescenta uma linha em `resultados/experimentos.csv`
 (contagem por classe, resolução, FPS de origem, tempo de inferência, FPS de processamento, hardware e versões)
@@ -99,6 +100,7 @@ verde = anotação, branco = ROI).
 contador_veiculos.py     # sistema completo (menu, treino da CNN, contagem, jogo, modo lote, --apresentar)
 avaliar_deteccao.py      # extração de frames, ferramenta de anotação e métricas
 rodar_experimentos.py    # roda todas as configurações de contagem em sequência
+montar_kit.py            # gera kit_apresentacao.zip para levar ao PC da apresentação
 rois_salvos.json         # ROI usada no vídeo
 avaliacao/rotulos/       # anotações manuais (formato YOLO)
 avaliacao/metricas.csv   # métricas de detecção
