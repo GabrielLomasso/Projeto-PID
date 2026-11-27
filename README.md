@@ -18,6 +18,8 @@ contagem por ID único com anti-duplicata (IoU/IoMin) → placar, vídeo anotado
 pip install -r requirements.txt
 ```
 
+Para as mesmas versões usadas nos experimentos (Ultralytics 8.4.218, torch 2.15.0 CPU, TensorFlow 2.21.0): `pip install -r requirements-versoes.txt`.
+
 Arquivos necessários na mesma pasta: `contador_veiculos.py`, `modelo_veiculos.keras` (CNN treinada; dá para treinar pela opção 2
 do menu), `rois_salvos.json` (criado ao marcar a ROI). Os pesos `yolov8s.pt` são baixados automaticamente pela Ultralytics.
 
@@ -103,9 +105,11 @@ rodar_experimentos.py    # roda todas as configurações de contagem em sequênc
 montar_kit.py            # gera kit_apresentacao.zip para levar ao PC da apresentação
 rois_salvos.json         # ROI usada no vídeo
 avaliacao/rotulos/       # anotações manuais (formato YOLO)
-avaliacao/metricas.csv   # métricas de detecção
+avaliacao/info.json      # frames amostrados e ROI usada na avaliação
+avaliacao/metricas.csv   # métricas de detecção (também em metricas.md)
 avaliacao/exemplos/      # imagens de acertos e falhas
 resultados/experimentos.csv
+requirements-versoes.txt # versões exatas do ambiente dos experimentos
 ```
 
 Não versionados (pesados): vídeos, `yolov8*.pt`, `modelo_veiculos.keras`, frames extraídos e vídeos de saída.
